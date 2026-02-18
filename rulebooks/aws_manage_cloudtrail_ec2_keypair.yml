@@ -15,14 +15,12 @@
             AttributeValue: 'false'
   rules:
     - name: match key pair creation event
-      # condition: event.CloudTrailEvent.eventName == 'CreateKeyPair' and event.CloudTrailEvent.requestParameters.keyName == '{{ ec2_key_name }}'
-      condition: event.CloudTrailEvent.eventName == 'CreateKeyPair'
+      condition: event.CloudTrailEvent.eventName == 'CreateKeyPair' and event.CloudTrailEvent.requestParameters.keyName == vars.ec2_key_name
       action:
         debug:
           msg: "SUCCESS CreateKeyPair event detected"
 
     - name: match key pair deletion event
-      # condition: event.CloudTrailEvent.eventName == 'DeleteKeyPair' and event.CloudTrailEvent.requestParameters.keyName == '{{ ec2_key_name }}'
-      condition: event.CloudTrailEvent.eventName == 'DeleteKeyPair'
+      condition: event.CloudTrailEvent.eventName == 'DeleteKeyPair' and event.CloudTrailEvent.requestParameters.keyName == vars.ec2_key_name
       action:
         shutdown:

@@ -1,4 +1,6 @@
+---
 # add your aws credentials here
+aws_region: 'us-east-1'
 resource_prefix: eda-event-source-aws-cloudtrail
 # defaults file for ec2_key
 ec2_key_name: "{{ resource_prefix }}-key-pair"
