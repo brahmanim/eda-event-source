@@ -1,0 +1,28 @@
+- name: Test aws cloudtrail source plugin
+  hosts: localhost
+
+  sources:
+    - amazon.aws.aws_cloudtrail:
+        access_key: "{{ aws_access_key }}"
+        secret_key: "{{ aws_secret_key }}"
+        session_token: "{{ security_token | default(omit) }}"
+        region: "{{ aws_region }}"
+        delay_seconds: 1
+        lookup_attributes:
+          - AttributeKey: 'EventSource'
+            AttributeValue: 'ec2.amazonaws.com'
+          - AttributeKey: 'ReadOnly'
+            AttributeValue: 'false'
+  rules:
+    - name: match key pair creation event
+      # condition: event.CloudTrailEvent.eventName == 'CreateKeyPair' and event.CloudTrailEvent.requestParameters.keyName == '{{ ec2_key_name }}'
+      condition: event.CloudTrailEvent.eventName == 'CreateKeyPair'
+      action:
+        debug:
+          msg: "SUCCESS CreateKeyPair event detected"
+
+    - name: match key pair deletion event
+      # condition: event.CloudTrailEvent.eventName == 'DeleteKeyPair' and event.CloudTrailEvent.requestParameters.keyName == '{{ ec2_key_name }}'
+      condition: event.CloudTrailEvent.eventName == 'DeleteKeyPair'
+      action:
+        shutdown:
