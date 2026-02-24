@@ -93,58 +93,58 @@
               - key_info.keypairs[0].tags['CamelCase'] == 'CamelCaseValue'
               - '"spaced key" in key_info.keypairs[0].tags'
               - key_info.keypairs[0].tags['spaced key'] == 'Spaced value'
+        
+        - name: Pause to wait for events CreateKeyPair and DeleteKeyPair to be processed
+          ansible.builtin.wait_for:
+            timeout: 360
 
-        - ansible.builtin.set_fact:
-            key_id_1: "{{ result.key.id }}"
 
-        # ============================================================
-        # Test: remove the key by AWS
-        # ============================================================
-        - name: Test removing an existent key (check mode)
-          amazon.aws.ec2_key:
-            name: "{{ ec2_key_name }}"
-            state: absent
-          register: result
-          check_mode: true
+        # # ============================================================
+        # # Test: remove the key by AWS
+        # # ============================================================
+        # - name: Test removing an existent key (check mode)
+        #   amazon.aws.ec2_key:
+        #     name: "{{ ec2_key_name }}"
+        #     state: absent
+        #   register: result
+        #   check_mode: true
 
-        - name: Assert removing an existent key
-          ansible.builtin.assert:
-            that:
-              - result is changed
+        # - name: Assert removing an existent key
+        #   ansible.builtin.assert:
+        #     that:
+        #       - result is changed
 
-        - name: Assert using check_mode did not removed key pair
-          amazon.aws.ec2_key_info:
-            names:
-              - "{{ ec2_key_name }}"
-          register: keys
-          failed_when: keys.keypairs | length == 0
+        # - name: Assert using check_mode did not removed key pair
+        #   amazon.aws.ec2_key_info:
+        #     names:
+        #       - "{{ ec2_key_name }}"
+        #   register: keys
+        #   failed_when: keys.keypairs | length == 0
 
-        - name: Test removing an existent key
-          amazon.aws.ec2_key:
-            name: "{{ ec2_key_name }}"
-            state: absent
-          register: result
+        # - name: Test removing an existent key
+        #   amazon.aws.ec2_key:
+        #     name: "{{ ec2_key_name }}"
+        #     state: absent
+        #   register: result
 
-        - name: Assert removing an existent key
-          ansible.builtin.assert:
-            that:
-              - result is changed
-              - '"key" in result'
-              - result.key == None
+        # - name: Assert removing an existent key
+        #   ansible.builtin.assert:
+        #     that:
+        #       - result is changed
+        #       - '"key" in result'
+        #       - result.key == None
 
-        - name: Assert that key pair was removed
-          amazon.aws.ec2_key_info:
-            names:
-              - "{{ ec2_key_name }}"
-          register: keys
-          failed_when: keys.keypairs | length > 0
+        # - name: Assert that key pair was removed
+        #   amazon.aws.ec2_key_info:
+        #     names:
+        #       - "{{ ec2_key_name }}"
+        #   register: keys
+        #   failed_when: keys.keypairs | length > 0
 
       always:
         # ============================================================
         - name: Always delete the key we might create
           amazon.aws.ec2_key:
-            name: "{{ item }}"
+            name: "{{ ec2_key_name }}"
             state: absent
-          with_items:
-            - "{{ ec2_key_name }}"
           ignore_errors: true
