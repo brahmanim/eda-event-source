@@ -1,5 +1,5 @@
 ---
-# add your aws credentials here 
+# add your aws credentials here
 aws_region: 'us-east-1'
 tiny_prefix: 'hdgftbdf'
 # defaults file for ec2_key

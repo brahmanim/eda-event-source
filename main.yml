@@ -16,6 +16,20 @@
       block:
 
         # ============================================================
+        # Pre-check: ansible-rulebook must be running
+        # ============================================================
+        - name: Check if ansible-rulebook is running
+          ansible.builtin.command: pgrep -f ansible-rulebook
+          register: ansible_rulebook_check
+          ignore_errors: true
+          changed_when: false
+
+        - name: Assert ansible-rulebook process is running
+          ansible.builtin.assert:
+            that: ansible_rulebook_check.rc == 0
+            fail_msg: "ansible-rulebook is not running; run it before running this playbook"
+
+        # ============================================================
         # Test: create new key by AWS (key_material not provided)
         # ============================================================
         - name: Test creating a new key pair (check_mode)
@@ -94,52 +108,45 @@
               - '"spaced key" in key_info.keypairs[0].tags'
               - key_info.keypairs[0].tags['spaced key'] == 'Spaced value'
         
-        - name: Pause to wait for events CreateKeyPair and DeleteKeyPair to be processed
-          ansible.builtin.wait_for:
-            timeout: 360
+        # - name: Pause to wait for events CreateKeyPair and DeleteKeyPair to be processed
+        #   ansible.builtin.wait_for:
+        #     timeout: 180
 
 
-        # # ============================================================
-        # # Test: remove the key by AWS
-        # # ============================================================
-        # - name: Test removing an existent key (check mode)
-        #   amazon.aws.ec2_key:
-        #     name: "{{ ec2_key_name }}"
-        #     state: absent
-        #   register: result
-        #   check_mode: true
-
-        # - name: Assert removing an existent key
-        #   ansible.builtin.assert:
-        #     that:
-        #       - result is changed
-
-        # - name: Assert using check_mode did not removed key pair
-        #   amazon.aws.ec2_key_info:
-        #     names:
-        #       - "{{ ec2_key_name }}"
-        #   register: keys
-        #   failed_when: keys.keypairs | length == 0
-
-        # - name: Test removing an existent key
-        #   amazon.aws.ec2_key:
-        #     name: "{{ ec2_key_name }}"
-        #     state: absent
-        #   register: result
-
-        # - name: Assert removing an existent key
-        #   ansible.builtin.assert:
-        #     that:
-        #       - result is changed
-        #       - '"key" in result'
-        #       - result.key == None
-
-        # - name: Assert that key pair was removed
-        #   amazon.aws.ec2_key_info:
-        #     names:
-        #       - "{{ ec2_key_name }}"
-        #   register: keys
-        #   failed_when: keys.keypairs | length > 0
+        # ============================================================
+        # Test: Check event source removed the key
+        # ============================================================
+        - name: Check that key pair was removed by event source
+          block:
+            - name: Check that key pair was removed (retry up to 3 min)
+              amazon.aws.ec2_key_info:
+                names:
+                  - "{{ ec2_key_name }}"
+              register: keys
+              until: keys.keypairs | length == 0
+              retries: 36
+              delay: 5
+          rescue:
+            - name: Fail with assertion message
+              ansible.builtin.fail:
+                msg: "Key pair '{{ ec2_key_name }}' was not removed after 3 minutes (event source may not have processed CreateKeyPair)"
+        
+        # ============================================================
+        # Test: Check ansible-rulebook process was shutdown by event source
+        # ============================================================
+        - name: Check that ansible-rulebook proccess was shutdown by event source
+          block:
+            - name: Check that ansible-rulebook process was shutdown (retry up to 3 min)
+              ansible.builtin.command: pgrep -f ansible-rulebook
+              register: ansible_rulebook_check
+              until: ansible_rulebook_check.rc != 0
+              ignore_errors: true
+              retries: 36
+              delay: 5
+            - name: Assert ansible-rulebook process is running
+              ansible.builtin.assert:
+                that: ansible_rulebook_check.rc != 0
+                fail_msg: "Ansible-rulebook process was not shutdown after 3 minutes (event source may not have processed DeleteKeyPair)"
 
       always:
         # ============================================================

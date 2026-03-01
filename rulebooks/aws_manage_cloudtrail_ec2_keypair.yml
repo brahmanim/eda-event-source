@@ -7,7 +7,7 @@
         secret_key: "{{ aws_secret_key }}"
         session_token: "{{ security_token | default(omit) }}"
         region: "{{ aws_region }}"
-        delay_seconds: 1
+        delay_seconds: 5
         lookup_attributes:
           - AttributeKey: 'EventSource'
             AttributeValue: 'ec2.amazonaws.com'
