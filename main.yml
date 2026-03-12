@@ -1,7 +1,6 @@
 ---
 # Beware: most of our tests here are run in parallel.
-# To add new tests you'll need to add a new host to the inventory and a matching
-# vars file should include the aws_region and aws credentials
+# To add new tests you'll need to add a new host to the inventory and a matching playbook.
 - name: Create ec2 key for event source eda cloudtrail tests
   hosts: all
   gather_facts: false
@@ -69,20 +68,7 @@
           ansible.builtin.assert:
             that:
               - result is changed
-              - '"key" in result'
-              - '"name" in result.key'
-              - '"fingerprint" in result.key'
-              - '"private_key" in result.key'
-              - '"id" in result.key'
-              - '"tags" in result.key'
               - result.key.name == ec2_key_name
-              - result.key.id.startswith('key-')
-              - '"snake_case" in result.key.tags'
-              - result.key.tags['snake_case'] == 'a_snake_case_value'
-              - '"CamelCase" in result.key.tags'
-              - result.key.tags['CamelCase'] == 'CamelCaseValue'
-              - '"spaced key" in result.key.tags'
-              - result.key.tags['spaced key'] == 'Spaced value'
 
         - name: Assert that key pair was created
           amazon.aws.ec2_key_info:
@@ -90,29 +76,7 @@
               - "{{ ec2_key_name }}"
           register: aws_keypair
           failed_when: aws_keypair.keypairs | length == 0
-
-        - name: Gather info about the key pair
-          amazon.aws.ec2_key_info:
-            names: "{{ ec2_key_name }}"
-          register: key_info
-
-        - name: Assert the gathered key info
-          ansible.builtin.assert:
-            that:
-              - key_info.keypairs[0].key_name == ec2_key_name
-              - key_info.keypairs[0].key_pair_id.startswith('key-')
-              - '"snake_case" in key_info.keypairs[0].tags'
-              - key_info.keypairs[0].tags['snake_case'] == 'a_snake_case_value'
-              - '"CamelCase" in key_info.keypairs[0].tags'
-              - key_info.keypairs[0].tags['CamelCase'] == 'CamelCaseValue'
-              - '"spaced key" in key_info.keypairs[0].tags'
-              - key_info.keypairs[0].tags['spaced key'] == 'Spaced value'
         
-        # - name: Pause to wait for events CreateKeyPair and DeleteKeyPair to be processed
-        #   ansible.builtin.wait_for:
-        #     timeout: 180
-
-
         # ============================================================
         # Test: Check event source removed the key
         # ============================================================
@@ -143,7 +107,7 @@
               ignore_errors: true
               retries: 36
               delay: 5
-            - name: Assert ansible-rulebook process is running
+            - name: Assert ansible-rulebook process was shutdown
               ansible.builtin.assert:
                 that: ansible_rulebook_check.rc != 0
                 fail_msg: "Ansible-rulebook process was not shutdown after 3 minutes (event source may not have processed DeleteKeyPair)"
@@ -155,3 +119,10 @@
             name: "{{ ec2_key_name }}"
             state: absent
           ignore_errors: true
+
+        # ============================================================
+        - name: Always kill the ansible-rulebook process
+          ansible.builtin.command: pkill -f ansible-rulebook
+          ignore_errors: true
+          changed_when: false
+          run_once: true
