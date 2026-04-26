@@ -4,3 +4,4 @@ aws_region: 'us-east-1'
 tiny_prefix: 'hdgftbdf'
 # defaults file for ec2_key
 ec2_key_name: "event-source-eda-aws-cloudtrail-{{ tiny_prefix }}-key-pair"
+# test
